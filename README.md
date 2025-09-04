@@ -16,6 +16,7 @@ It uses **Wokwi** as the ESP32 simulator and **PlatformIO** in VS Code for devel
   - Turn LED **ON**
   - Turn LED **OFF**
   - Show current LED status
+  - Publish to `IoT_Undip_ESP32` with 0 or 1 payload 
 - Simulated in **Wokwi** for quick testing
 
 ### ESP32 - GUI
