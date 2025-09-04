@@ -18,4 +18,10 @@ It uses **Wokwi** as the ESP32 simulator and **PlatformIO** in VS Code for devel
   - Show current LED status
 - Simulated in **Wokwi** for quick testing
 
+### ESP32 - GUI
+![ESP32 & GUI Screenshot](Assets/ESP32_GUI.png)
+
+### MQTTX
+![MQTTX Screenshot](Assets/MQTTX.png)
+
 ---
