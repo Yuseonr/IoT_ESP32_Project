@@ -1,7 +1,19 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <FastLED.h>
 
+#define NUM_LEDS_STRIP1 20
+#define NUM_LEDS_STRIP2 20
+#define NUM_LEDS_STRIP3 20
+
+#define DATA_PIN1 23
+#define DATA_PIN2 22
+#define DATA_PIN3 21
+
+CRGB strip1[NUM_LEDS_STRIP1];
+CRGB strip2[NUM_LEDS_STRIP2];
+CRGB strip3[NUM_LEDS_STRIP3];
 
 /*
   ESP32 MQTT LED Controller
@@ -19,11 +31,108 @@ const char* password = "";
 const char* mqtt_server = "broker.hivemq.com";
 const char* mqtt_topic = "IoT_Undip_ESP32";
 
-// GPIO pin for LED (you can use onboard LED on pin 2 for ESP32 DevKit)
-const int ledPin = 2;
-
 WiFiClient espClient;
 PubSubClient client(espClient);
+
+// Pattern Procedure
+
+char current_pattern = '0';
+
+void turnOff(CRGB* strip, int numLeds){
+    for(int i = 0; i < numLeds; i++) {
+        strip[i] = CHSV(0,0,0);
+    }
+}
+
+void rainbowPattern(CRGB* strip, int numLeds) {
+    static uint8_t startHue = 0;
+    startHue += 2;
+    
+    for(int i = 0; i < numLeds; i++) {
+        strip[i] = CHSV(startHue + (i * 10), 255, 255);
+    }
+}
+
+void snakePattern(CRGB* strip1, int numLeds1, CRGB* strip2, int numLeds2, CRGB* strip3, int numLeds3) {
+    static int head = 0;
+    static int totalLeds = numLeds1 + numLeds2 + numLeds3;
+    const int SNAKE_LENGTH = 8; 
+    
+    // Clear all strips
+    for(int i = 0; i < numLeds1; i++){strip1[i] = CRGB::Black;}
+    for(int i = 0; i < numLeds2; i++){strip2[i] = CRGB::Black;}
+    for(int i = 0; i < numLeds3; i++){strip3[i] = CRGB::Black;}
+    
+    for(int i = 0; i < SNAKE_LENGTH; i++) {
+        int pos = (head - i + totalLeds) % totalLeds;
+        if(pos < numLeds1) {
+            // LED is on strip 1
+            strip1[pos] = CRGB(255, 0, 0);
+        }
+        else if(pos < numLeds1 + numLeds2) {
+			 // LED is on strip 2
+            int strip2_pos = (numLeds2 - 1) - (pos - numLeds1);
+            strip2[strip2_pos] = CRGB(255, 0, 0);
+        }
+        else {
+			 // LED is on strip 3
+            strip3[pos - numLeds1 - numLeds2] = CRGB(255, 0, 0);
+        }
+    }
+    head = (head + 1) % totalLeds;
+}
+
+void fastPattern(CRGB* strip1, int numLeds1, CRGB* strip2, int numLeds2, CRGB* strip3, int numLeds3) {
+	static int head1 = 0;
+	static int head2 = 0;
+	static int head3 = 0;
+
+    for(int i = 0; i < numLeds1; i++){strip1[i] = CRGB::Black;}
+    for(int i = 0; i < numLeds2; i++){strip2[i] = CRGB::Black;}
+    for(int i = 0; i < numLeds3; i++){strip3[i] = CRGB::Black;}
+
+    for(int i = 0; i <= 5; i++) {
+        int pos = (head1 - i + numLeds1) % numLeds1;
+        strip1[pos] = CRGB(0,0,255);
+    }
+	for(int i = 0; i <= 5; i++) {
+        int pos = (head2 - i + numLeds2) % numLeds2;
+        strip2[pos] = CRGB(0,0,255);
+    }
+	for(int i = 0; i <= 5; i++) {
+        int pos = (head3 - i + numLeds3) % numLeds3;
+        strip3[pos] = CRGB(0,0,255);
+    }
+    head1 = (head1 + 1) % numLeds1;
+	head2 = (head2 + 1) % numLeds2;
+	head3 = (head3 + 1) % numLeds3;
+}
+
+void arrowPattern(CRGB* strip1, int numLeds1, CRGB* strip2, int numLeds2, CRGB* strip3, int numLeds3){
+	static int head1 = 0;
+	static int head2 = 0;
+	static int head3 = 0;
+
+    for(int i = 0; i < numLeds1; i++){strip1[i] = CRGB::Black;}
+    for(int i = 0; i < numLeds2; i++){strip2[i] = CRGB::Black;}
+    for(int i = 0; i < numLeds3; i++){strip3[i] = CRGB::Black;}
+
+    for(int i = 2; i <= 7; i++) {
+        int pos = (head1 - i + numLeds1) % numLeds1;
+        strip1[pos] = CRGB(0,255,0);
+    }
+	for(int i = 0; i <=5; i++) {
+        int pos = (head2 - i + numLeds2) % numLeds2;
+        strip2[pos] = CRGB(0,255,0);
+    }
+	for(int i = 2; i <= 7; i++) {
+        int pos = (head3 - i + numLeds3) % numLeds3;
+        strip3[pos] = CRGB(0,255,000);
+    }
+    head1 = (head1 + 1) % numLeds1;
+	head2 = (head2 + 1) % numLeds2;
+	head3 = (head3 + 1) % numLeds3;
+}
 
 // connect to WiFi
 void setup_wifi() {
@@ -58,11 +167,23 @@ void callback(char* topic, byte* message, unsigned int length) {
   Serial.println(messageTemp);
 
   if (messageTemp == "1") {
-    digitalWrite(ledPin, HIGH);  // Turn LED ON
+    current_pattern = '1';
     Serial.println("LED ON");
   } else if (messageTemp == "0") {
-    digitalWrite(ledPin, LOW);   // Turn LED OFF
+    current_pattern = '0';
     Serial.println("LED OFF");
+  } else if (messageTemp == "2") {
+    current_pattern = '2';
+    Serial.println("RAINBOW PATTERN");
+  } else if (messageTemp == "3") {
+    current_pattern = '3';
+    Serial.println("SNAKE PATTERN");
+  } else if (messageTemp == "4") {
+    current_pattern = '4';
+    Serial.println("FAST PATTERN");
+  } else if (messageTemp == "5") {
+    current_pattern = '5';
+    Serial.println("ARROW PATTERN");
   }
 }
 
@@ -89,8 +210,11 @@ void reconnect() {
 
 
 void setup() {
-  pinMode(ledPin, OUTPUT);
   Serial.begin(115200);
+  FastLED.addLeds<WS2812, DATA_PIN1, RGB>(strip1, NUM_LEDS_STRIP1);
+  FastLED.addLeds<WS2812, DATA_PIN2, RGB>(strip2, NUM_LEDS_STRIP2);
+  FastLED.addLeds<WS2812, DATA_PIN3, RGB>(strip3, NUM_LEDS_STRIP3);
+  FastLED.setBrightness(255);
 
   setup_wifi();
 
@@ -103,4 +227,25 @@ void loop() {
     reconnect();
   }
   client.loop();
+  if (current_pattern == '1') {
+    rainbowPattern(strip1, NUM_LEDS_STRIP1);
+	  rainbowPattern(strip2, NUM_LEDS_STRIP2);
+	  rainbowPattern(strip3, NUM_LEDS_STRIP3);  
+  } else if (current_pattern == '0') {
+    turnOff(strip1, NUM_LEDS_STRIP1);
+	  turnOff(strip2, NUM_LEDS_STRIP2);
+	  turnOff(strip3, NUM_LEDS_STRIP3);   
+  } else if (current_pattern == '2') {
+    rainbowPattern(strip1, NUM_LEDS_STRIP1);
+	  rainbowPattern(strip2, NUM_LEDS_STRIP2);
+	  rainbowPattern(strip3, NUM_LEDS_STRIP3);
+  } else if (current_pattern == '3') {
+    snakePattern(strip1, NUM_LEDS_STRIP1, strip2, NUM_LEDS_STRIP2, strip3, NUM_LEDS_STRIP3);
+  } else if (current_pattern == '4') {
+    fastPattern(strip1, NUM_LEDS_STRIP1, strip2, NUM_LEDS_STRIP2, strip3, NUM_LEDS_STRIP3);
+  } else if (current_pattern == '5') {
+    arrowPattern(strip1, NUM_LEDS_STRIP1, strip2, NUM_LEDS_STRIP2, strip3, NUM_LEDS_STRIP3);
+  }
+  FastLED.show();
+	delay(20);
 }
