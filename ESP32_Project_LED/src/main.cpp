@@ -36,7 +36,13 @@ PubSubClient client(espClient);
 
 // Pattern Procedure
 
-int current_pattern = 0;
+char current_pattern = '0';
+
+void turnOff(CRGB* strip, int numLeds){
+    for(int i = 0; i < numLeds; i++) {
+        strip[i] = CHSV(0,0,0);
+    }
+}
 
 void rainbowPattern(CRGB* strip, int numLeds) {
     static uint8_t startHue = 0;
@@ -161,33 +167,24 @@ void callback(char* topic, byte* message, unsigned int length) {
   Serial.println(messageTemp);
 
   if (messageTemp == "1") {
-    rainbowPattern(strip1, NUM_LEDS_STRIP1);
-	  rainbowPattern(strip2, NUM_LEDS_STRIP2);
-	  rainbowPattern(strip3, NUM_LEDS_STRIP3);  
+    current_pattern = '1';
     Serial.println("LED ON");
   } else if (messageTemp == "0") {
-    rainbowPattern(strip1, NUM_LEDS_STRIP1);
-	  rainbowPattern(strip2, NUM_LEDS_STRIP2);
-	  rainbowPattern(strip3, NUM_LEDS_STRIP3);   
+    current_pattern = '0';
     Serial.println("LED OFF");
   } else if (messageTemp == "2") {
-    rainbowPattern(strip1, NUM_LEDS_STRIP1);
-	  rainbowPattern(strip2, NUM_LEDS_STRIP2);
-	  rainbowPattern(strip3, NUM_LEDS_STRIP3);
+    current_pattern = '2';
     Serial.println("RAINBOW PATTERN");
   } else if (messageTemp == "3") {
-    snakePattern(strip1, NUM_LEDS_STRIP1, strip2, NUM_LEDS_STRIP2, strip3, NUM_LEDS_STRIP3);
+    current_pattern = '3';
     Serial.println("SNAKE PATTERN");
   } else if (messageTemp == "4") {
-    fastPattern(strip1, NUM_LEDS_STRIP1, strip2, NUM_LEDS_STRIP2, strip3, NUM_LEDS_STRIP3);
+    current_pattern = '4';
     Serial.println("FAST PATTERN");
   } else if (messageTemp == "5") {
-    arrowPattern(strip1, NUM_LEDS_STRIP1, strip2, NUM_LEDS_STRIP2, strip3, NUM_LEDS_STRIP3);
+    current_pattern = '5';
     Serial.println("ARROW PATTERN");
   }
-  FastLED.show();
-	delay(20);
-
 }
 
 // reconnect to MQTT broker if disconnected
@@ -230,4 +227,25 @@ void loop() {
     reconnect();
   }
   client.loop();
+  if (current_pattern == '1') {
+    rainbowPattern(strip1, NUM_LEDS_STRIP1);
+	  rainbowPattern(strip2, NUM_LEDS_STRIP2);
+	  rainbowPattern(strip3, NUM_LEDS_STRIP3);  
+  } else if (current_pattern == '0') {
+    turnOff(strip1, NUM_LEDS_STRIP1);
+	  turnOff(strip2, NUM_LEDS_STRIP2);
+	  turnOff(strip3, NUM_LEDS_STRIP3);   
+  } else if (current_pattern == '2') {
+    rainbowPattern(strip1, NUM_LEDS_STRIP1);
+	  rainbowPattern(strip2, NUM_LEDS_STRIP2);
+	  rainbowPattern(strip3, NUM_LEDS_STRIP3);
+  } else if (current_pattern == '3') {
+    snakePattern(strip1, NUM_LEDS_STRIP1, strip2, NUM_LEDS_STRIP2, strip3, NUM_LEDS_STRIP3);
+  } else if (current_pattern == '4') {
+    fastPattern(strip1, NUM_LEDS_STRIP1, strip2, NUM_LEDS_STRIP2, strip3, NUM_LEDS_STRIP3);
+  } else if (current_pattern == '5') {
+    arrowPattern(strip1, NUM_LEDS_STRIP1, strip2, NUM_LEDS_STRIP2, strip3, NUM_LEDS_STRIP3);
+  }
+  FastLED.show();
+	delay(20);
 }
